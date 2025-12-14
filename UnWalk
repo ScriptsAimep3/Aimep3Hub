@@ -1,0 +1,138 @@
+loadstring([[
+--// SONIDO AL EJECUTAR
+local SoundService = game:GetService("SoundService")
+local s = Instance.new("Sound")
+s.SoundId = "rbxassetid://18808571870"
+s.Volume = 1
+s.Parent = SoundService
+s:Play()
+
+--// "Idle While Moving" GUI 
+--// Makes your character look idle while walking
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+
+-- GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "IdleWhileMoving"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game.CoreGui
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 220, 0, 120)
+Frame.Position = UDim2.new(0.5, -110, 0.5, -60)
+Frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+Frame.Active = true
+Frame.Draggable = true
+Frame.Parent = ScreenGui
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 10)
+
+local Title = Instance.new("TextLabel")
+Title.Text = "🧍 Unwalk By Aimep3 Scripts"
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundTransparency = 1
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 16
+Title.Parent = Frame
+
+local StatusLight = Instance.new("Frame")
+StatusLight.Size = UDim2.new(0, 12, 0, 12)
+StatusLight.Position = UDim2.new(1, -20, 0, 9)
+StatusLight.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+StatusLight.Parent = Frame
+Instance.new("UICorner", StatusLight).CornerRadius = UDim.new(1, 0)
+
+local Button = Instance.new("TextButton")
+Button.Size = UDim2.new(1, -40, 0, 40)
+Button.Position = UDim2.new(0, 20, 0.5, -20)
+Button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+Button.Font = Enum.Font.GothamBold
+Button.TextSize = 16
+Button.Text = "Toggle UnWalk"
+Button.Parent = Frame
+Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 8)
+
+-- Logic
+local active = false
+local conn
+local idleTrack
+local idleAnimId
+
+local function getIdleAnim()
+	local animate = character:FindFirstChild("Animate")
+	if animate and animate:FindFirstChild("idle") then
+		for _, v in ipairs(animate.idle:GetChildren()) do
+			if v:IsA("StringValue") and v.Value ~= "" then
+				return v.Value
+			end
+		end
+	end
+	return "rbxassetid://507766388"
+end
+
+local function playIdle()
+	if idleTrack then
+		idleTrack:Stop(0)
+		idleTrack:Destroy()
+	end
+	local anim = Instance.new("Animation")
+	anim.AnimationId = idleAnimId
+	idleTrack = humanoid:LoadAnimation(anim)
+	idleTrack.Looped = true
+	idleTrack.Priority = Enum.AnimationPriority.Action
+	idleTrack:Play(0)
+end
+
+local function toggle(state)
+	active = state
+	if not humanoid then return end
+
+	if active then
+		idleAnimId = getIdleAnim()
+		StatusLight.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        playIdle()
+
+		for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+			if track.Animation.AnimationId ~= idleAnimId and track.Name:lower():find("walk") then
+				track:Stop(0)
+			end
+		end
+
+		if conn then conn:Disconnect() end
+		conn = humanoid.AnimationPlayed:Connect(function(track)
+			if active then
+				local id = track.Animation.AnimationId
+				if id ~= idleAnimId and track.Name:lower():find("walk") then
+					task.wait()
+					track:Stop(0)
+					if idleTrack and not idleTrack.IsPlaying then
+						playIdle()
+					end
+				end
+			end
+		end)
+	else
+		StatusLight.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+		if conn then conn:Disconnect() conn = nil end
+		if idleTrack then idleTrack:Stop(0) idleTrack = nil end
+	end
+end
+
+Button.MouseButton1Click:Connect(function()
+	toggle(not active)
+	Button.Text = active and "Unwalk: ON ✅" or "Unwalk: OFF ❌"
+end)
+
+player.CharacterAdded:Connect(function(char)
+	character = char
+	humanoid = char:WaitForChild("Humanoid")
+	if active then task.defer(function() toggle(true) end) end
+end)
+
+print("[✅] Idle-While-Moving GUI Loaded")
+]])()
